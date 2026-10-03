@@ -27,19 +27,42 @@ const registerUser = async (req, res) => {
             await sendMail(email, subject, message);
 
             const token = genToken(user._id);
-            res.cookie('token', token);          
+            res.cookie('token', token, { httpOnly: true, maxAge: 1000 * 60 * 60 * 24 * 7});          
             return res.status(201).json({ success: true, message: "User Created Successfully!~ Please check your mail", user: { email: email, name: user.name }});
         } else {
-            res.status(400).json({ success: false, message: "User creation Failed!!"})
+            res.status(400).json({ success: false, message: `User creation Failed!! ${error.message}`})
         }
     } catch (error) {
         return res.status(500).json({ success: false, message: "Unknown Error while User Creation"})
     }
 }
 
+const loginUser = async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        const user = User.findOne({ email });
+        if(user && bcrypt.compare(password, user.password)){
+            const token = genToken(user._id);
+            res.cookie('token', token , { httpOnly: true, maxAge: 1000 * 60 * 60 * 24 * 7 });
+            return res.status(201).json({ success: true, message: "User Login Successfully!~", user: { email: email, name: user.name }});
+        } else {
+            return res.status(400).json({ success: false, message: "Invalid Credentials"})
+        }
+    } catch (error) {
+        return res.status(500).json({ success: false, message: `Unknown Error while Login ${error.message}`})
+    }
+}
 
+const logoutUser = async (req, res) => {
+    try {
+        res.clearCookie('token', { httpOnly: true });
+        return res.status(201).json({ success: true, message: "Logout success"});
+    } catch (error) {
+        return res.status(500).json({ success: false, message: `Logout Failed ${error.message}`})
+    }
+}
 
-module.exports = registerUser;
+module.exports = { registerUser, loginUser, logoutUser };
 
 
 
